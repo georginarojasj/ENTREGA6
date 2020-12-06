@@ -1,0 +1,207 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+Instalamos librerias
+
+```{r}
+library(stringr)
+library(magrittr)
+library(rio)
+library(cluster)
+library(plyr) # para funcion "each"
+library(psych) #para hacer tablas comparadas
+library(knitr) #para generar tablas html
+library(kableExtra) #para generar tablas html
+library(factoextra) #visualizaciÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ³n de clusters
+library(ggrepel) #para que las etiquetas de los graficos no se superpongan
+library(htmltab)
+library(dplyr)
+library(dbscan) #para metodo de densidad
+library(fpc) #para obtener clusters por densidad
+library(ggplot2)
+library(scatterplot3d) # para graficos 3d
+library(ggpubr) # para obtener barras de error
+library(ggplot2)
+library(stargazer) #regresion lineal
+library(sjPlot)
+```
+
+Traemos datos
+
+```{r}
+link = "https://github.com/orlando-20181209/Entrega-1/raw/master/BaseFinalNA.csv"
+data = import(link)
+```
+
+Exploramos
+
+```{r}
+names(data)[3] = "EstPolitica"
+names(data)[9] = "Inv"
+names(data)[10] = "Var"
+names(data)
+data = na.omit(data)
+```
+
+## EXPLORACION
+
+Exploramos con graficos las posibles relaciones
+
+```{r}
+#Base 1: Condiciones de vida
+
+base1=ggplot(data=data, aes(x=gastosocial, y=Desem + HDI + POB))
+scatter = base1 + geom_point()
+scatter
+```
+
+```{r}
+#Base 2: Contexto político nacional
+
+base2=ggplot(data=data, aes(x=gastosocial, y=EstPolitica + Politicalculture + Electoral + Civilliberties))
+scatter = base2 + geom_point()
+scatter
+
+```
+
+```{r}
+#Base 3: Tendencia economica
+
+base3=ggplot(data=data, aes(x=gastosocial, y= Impuestos + Inv + Var + PBIpc))
+scatter = base3 + geom_point()
+scatter
+```
+
+```{r}
+#Base 4: Accountability
+
+base4=ggplot(data=data, aes(x=gastosocial, y= Eficiencia + CalidadReg + ControlCorr + Participacion))
+scatter = base4 + geom_point()
+scatter
+```
+
+## REGRESION LINEAL
+
+Proponemos modelos
+
+```{r}
+modelo1 = formula(gastosocial ~ Desem + HDI + POB)
+modelo2 = formula(gastosocial ~ EstPolitica + Politicalculture + Electoral + Civilliberties)
+modelo3 = formula(gastosocial ~ Impuestos + Inv + Var + PBIpc)
+modelo4 = formula(gastosocial ~ Eficiencia + CalidadReg + ControlCorr + Participacion)
+```
+
+Planteamos las regresiones
+
+```{r}
+reg1 = lm(modelo1, data = data)
+reg2 = lm(modelo2, data = data)
+reg3 = lm(modelo3, data = data)
+reg4 = lm(modelo4, data = data)
+```
+
+# a. Modelo 1: condiciones de vida
+
+```{r}
+reg1 = lm(modelo1, data = data)
+stargazer(reg1,type = "text",intercept.bottom = FALSE)
+```
+
+# b. Modelo 2: Contexto politico nacional
+
+```{r}
+reg2 = lm(modelo2, data = data)
+stargazer(reg2,type = "text",intercept.bottom = FALSE)
+```
+
+# c. Modelo 3: Tendencia economica
+
+```{r}
+reg3 = lm(modelo3, data = data)
+stargazer(reg3,type = "text",intercept.bottom = FALSE)
+```
+
+# d. Modelo 4: Accountability
+
+```{r}
+reg4 = lm(modelo4, data = data)
+stargazer(reg4,type = "text",intercept.bottom = FALSE)
+```
+
+#Analisis de varianza (Anova)
+
+```{r}
+tanova = anova(reg1, reg2, reg3, reg4)
+stargazer(tanova, type = 'text', summary = F, tittle = "Tabla de Análisis de Varianza")
+```
+
+# Diagnóstico de la regresión
+
+**1. Linealidad**
+
+```{r}
+plot(reg1, 1)
+plot(reg2, 1)
+plot(reg3, 1)
+plot(reg4, 1)
+```
+
+**2. Homocedastacidad**
+
+```{r}
+library(lmtest)
+bptest(reg1)
+bptest(reg2)
+bptest(reg3)
+bptest(reg4)
+```
+
+**3. Normalidad de residuos**
+
+```{r}
+plot(reg1, 2)
+shapiro.test(reg1$residuals)
+plot(reg2, 2)
+shapiro.test(reg2$residuals)
+plot(reg3, 2)
+shapiro.test(reg3$residuals)
+plot(reg4, 2)
+shapiro.test(reg4$residuals)
+```
+
+**4. Multicolinealidad**
+
+```{r}
+library(DescTools)
+VIF(reg1)
+VIF(reg2)
+VIF(reg3)
+VIF(reg4)
+```
+
+**5. Valores influyentes**
+
+```{r}
+plot(reg1, 5)
+plot(reg2, 5)
+plot(reg3, 5)
+plot(reg4, 5)
+```
+
+```{r}
+checkReg1=as.data.frame(influence.measures(reg1)$is.inf)
+checkReg1[checkReg1$cook.d | checkReg1$hat,]
+checkReg2=as.data.frame(influence.measures(reg2)$is.inf)
+checkReg2[checkReg2$cook.d | checkReg2$hat,]
+checkReg3=as.data.frame(influence.measures(reg3)$is.inf)
+checkReg3[checkReg3$cook.d | checkReg3$hat,]
+checkReg4=as.data.frame(influence.measures(reg4)$is.inf)
+checkReg4[checkReg3$cook.d | checkReg4$hat,]
+```
+
+
+
+
+
+
